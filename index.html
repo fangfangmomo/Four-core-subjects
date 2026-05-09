@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初一小四门知识大闯关</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+        .game-container {
+            background: white;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .subject-bar {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .question {
+            font-size: 20px;
+            margin-bottom: 30px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .option {
+            background: #e8eaf6;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .option:hover {
+            background: #667eea;
+            color: white;
+        }
+        .option.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .btn {
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #667eea;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 25px;
+        }
+        .final-score {
+            font-size: 24px;
+            color: #764ba2;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>📚 初一小四门知识大闯关 📚</h1>
+        <div class="score-board">
+            <span>分数：<span id="score">0</span></span>
+            <span>提示：<span id="hints">3</span>次</span>
+        </div>
+        <div class="subject-bar">当前关卡：<span id="subject">历史</span>（<span id="q-num">1</span>/10）</div>
+        <div class="question" id="question">loading...</div>
+        <div class="options">
+            <div class="option" id="optA" onclick="checkAnswer('A')">A. </div>
+            <div class="option" id="optB" onclick="checkAnswer('B')">B. </div>
+            <div class="option" id="optC" onclick="checkAnswer('C')">C. </div>
+            <div class="option" id="optD" onclick="checkAnswer('D')">D. </div>
+        </div>
+        <button class="btn" id="hintBtn" onclick="useHint()">💡 使用提示</button>
+        <button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>➡️ 下一题</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // 题库：历史、道法、地理、生物各10题
+        const questionBank = {
+            history: [
+                { q: "我国境内目前已确认的最早古人类是？", options: ["北京人", "元谋人", "河姆渡人", "半坡人"], answer: "B" },
+                { q: "北京人生活的年代是？", options: ["距今约170万年", "距今约70万-20万年", "距今约7000年", "距今约6000年"], answer: "B" },
+                { q: "河姆渡居民种植的农作物是？", options: ["粟", "小麦", "水稻", "玉米"], answer: "C" },
+                { q: "半坡居民居住的房屋样式是？", options: ["干栏式", "半地穴式", "窑洞", "木屋"], answer: "B" },
+                { q: "西周为巩固统治实行的制度是？", options: ["禅让制", "世袭制", "分封制", "郡县制"], answer: "C" },
+                { q: "商鞅变法发生在哪个诸侯国？", options: ["齐国", "楚国", "秦国", "魏国"], answer: "C" },
+                { q: "秦统一六国的时间是？", options: ["公元前221年", "公元前202年", "公元221年", "公元202年"], answer: "A" },
+                { q: "秦朝统一的标准文字是？", options: ["甲骨文", "金文", "小篆", "隶书"], answer: "C" },
+                { q: "汉武帝“罢黜百家，独尊儒术”采纳的是谁的建议？", options: ["李斯", "董仲舒", "主父偃", "卫青"], answer: "B" },
+                { q: "丝绸之路的起点是？", options: ["洛阳", "长安", "咸阳", "建康"], answer: "B" }
+            ],
+            politics: [
+                { q: "中学时代对我们成长的意义是？", options: ["无足轻重", "奠定重要基础", "只是玩耍时光", "仅学习知识"], answer: "B" },
+                { q: "学习的特点是？", options: ["只有苦没有乐", "只有乐没有苦", "苦乐交织", "毫无乐趣"], answer: "C" },
+                { q: "友谊的特质不包括？", options: ["亲密关系", "平等双向", "心灵相遇", "互相利用"], answer: "D" },
+                { q: "教师的使命是？", options: ["赚钱养家", "教书育人", "管理学生", "传授技能"], answer: "B" },
+                { q: "孝亲敬长是？", options: ["只是美德", "只是法定义务", "既是美德也是法定义务", "可做可不做"], answer: "C" },
+                { q: "生命的特点不包括？", options: ["来之不易", "独特", "可逆", "短暂"], answer: "C" },
+                { q: "法律的特征不包括？", options: ["国家制定或认可", "国家强制力保证实施", "对部分人有效", "普遍约束力"], answer: "C" },
+                { q: "法律的作用是？", options: ["仅规范作用", "仅保护作用", "规范和保护作用", "无作用"], answer: "C" },
+                { q: "接纳自己需要接纳？", options: ["优点", "不完美", "优点和全部", "仅身材相貌"], answer: "C" },
+                { q: "终身学习的原因是？", options: ["学习没用", "学习伴随成长，没有终点", "只在学校学习", "成年后不用学习"], answer: "B" }
+            ],
+            geography: [
+                { q: "地球的形状是？", options: ["正球体", "两极稍扁赤道略鼓", "正方体", "圆柱体"], answer: "B" },
+                { q: "赤道周长约为？", options: ["4万千米", "5.1亿千米", "6371千米", "8万千米"], answer: "A" },
+                { q: "划分东西半球的分界线是？", options: ["0°经线", "180°经线", "20°W和160°E", "赤道"], answer: "C" },
+                { q: "地球上海洋与陆地的面积比例约为？", options: ["七分陆地三分海洋", "三分陆地七分海洋", "各占一半", "八分陆地二分海洋"], answer: "B" },
+                { q: "面积最大的大洲是？", options: ["非洲", "亚洲", "北美洲", "南美洲"], answer: "B" },
+                { q: "面积最大的大洋是？", options: ["大西洋", "印度洋", "太平洋", "北冰洋"], answer: "C" },
+                { q: "板块交界处地壳特点是？", options: ["稳定", "活跃，多火山地震", "平坦", "无变化"], answer: "B" },
+                { q: "气候的两个基本要素是？", options: ["气温和降水", "风和雨", "雪和雾", "晴天和阴天"], answer: "A" },
+                { q: "世界气温分布的一般规律是？", options: ["由赤道向两极递增", "由赤道向两极递减", "无规律", "由海洋向陆地递减"], answer: "B" },
+                { q: "有太阳直射现象的温度带是？", options: ["热带", "北温带", "南温带", "北寒带"], answer: "A" }
+            ],
+            biology: [
+                { q: "下列属于生物的是？", options: ["机器人", "珊瑚", "生石花", "钟乳石"], answer: "C" },
+                { q: "生物最基本的特征是？", options: ["生长", "繁殖", "新陈代谢", "应激性"], answer: "C" },
+                { q: "生态系统的组成包括？", options: ["生产者和消费者", "消费者和分解者", "生物部分和非生物部分", "生产者和分解者"], answer: "C" },
+                { q: "食物链的起点是？", options: ["消费者", "生产者", "分解者", "非生物部分"], answer: "B" },
+                { q: "显微镜放大倍数的计算方法是？", options: ["目镜+物镜", "目镜×物镜", "目镜-物镜", "物镜÷目镜"], answer: "B" },
+                { q: "植物细胞特有的结构是？", options: ["细胞膜", "细胞核", "细胞壁", "细胞质"], answer: "C" },
+                { q: "光合作用的场所是？", options: ["线粒体", "细胞核", "叶绿体", "细胞膜"], answer: "C" },
+                { q: "动物体的结构层次是？", options: ["细胞→组织→器官→系统→动物体", "细胞→器官→组织→系统→动物体", "细胞→组织→系统→器官→动物体", "系统→器官→组织→细胞→动物体"], answer: "A" },
+                { q: "没有根、茎、叶分化的植物是？", options: ["苔藓植物", "藻类植物", "蕨类植物", "种子植物"], answer: "B" },
+                { q: "人体发育的起点是？", options: ["卵细胞", "精子", "受精卵", "胎儿"], answer: "C" }
+            ]
+        };
+
+        // 游戏状态
+        let currentSubject = "history";
+        let currentQIndex = 0;
+        let score = 0;
+        let hints = 3;
+        let answered = false;
+
+        // DOM 元素
+        const questionEl = document.getElementById("question");
+        const optA = document.getElementById("optA");
+        const optB = document.getElementById("optB");
+        const optC = document.getElementById("optC");
+        const optD = document.getElementById("optD");
+        const scoreEl = document.getElementById("score");
+        const hintsEl = document.getElementById("hints");
+        const subjectEl = document.getElementById("subject");
+        const qNumEl = document.getElementById("q-num");
+        const hintBtn = document.getElementById("hintBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const resultEl = document.getElementById("result");
+
+        // 初始化题目
+        function loadQuestion() {
+            const q = questionBank[currentSubject][currentQIndex];
+            questionEl.textContent = q.q;
+            optA.textContent = "A. " + q.options[0];
+            optB.textContent = "B. " + q.options[1];
+            optC.textContent = "C. " + q.options[2];
+            optD.textContent = "D. " + q.options[3];
+            // 重置选项状态
+            [optA, optB, optC, optD].forEach(el => {
+                el.classList.remove("disabled");
+                el.style.background = "#e8eaf6";
+                el.style.color = "#333";
+            });
+            resultEl.textContent = "";
+            answered = false;
+            nextBtn.disabled = true;
+            // 更新关卡信息
+            const subjectMap = { history: "历史", politics: "道法", geography: "地理", biology: "生物" };
+            subjectEl.textContent = subjectMap[currentSubject];
+            qNumEl.textContent = currentQIndex + 1;
+        }
+
+        // 检查答案
+        function checkAnswer(selected) {
+            if (answered) return;
+            answered = true;
+            const q = questionBank[currentSubject][currentQIndex];
+            // 标记正确/错误
+            [optA, optB, optC, optD].forEach(el => {
+                el.classList.add("disabled");
+                if (el.id === "opt" + q.answer) {
+                    el.style.background = "#4CAF50";
+                    el.style.color = "white";
+                } else if (el.id === "opt" + selected) {
+                    el.style.background = "#f44336";
+                    el.style.color = "white";
+                }
+            });
+            // 更新分数
+            if (selected === q.answer) {
+                score += 10;
+                scoreEl.textContent = score;
+                resultEl.textContent = "✅ 回答正确！+10分";
+                resultEl.style.color = "#4CAF50";
+            } else {
+                resultEl.textContent = "❌ 回答错误，正确答案是" + q.answer;
+                resultEl.style.color = "#f44336";
+            }
+            nextBtn.disabled = false;
+        }
+
+        // 使用提示
+        function useHint() {
+            if (hints <= 0 || answered) return;
+            hints--;
+            hintsEl.textContent = hints;
+            hintBtn.disabled = (hints <= 0);
+            // 排除2个错误选项
+            const q = questionBank[currentSubject][currentQIndex];
+            let wrongOpts = ["A", "B", "C", "D"].filter(o => o !== q.answer);
+            // 随机选2个错误选项禁用
+            let disable1 = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+            let disable2 = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+            while (disable2 === disable1) {
+                disable2 = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+            }
+            ["opt" + disable1, "opt" + disable2].forEach(id => {
+                document.getElementById(id).classList.add("disabled");
+                document.getElementById(id).style.opacity = "0.5";
+            });
+        }
+
+        // 下一题
+        function nextQuestion() {
+            currentQIndex++;
+            // 检查当前科目是否完成
+            if (currentQIndex >= 10) {
+                // 切换科目
+                const subjects = ["history", "politics", "geography", "biology"];
+                let currentIndex = subjects.indexOf(currentSubject);
+                if (currentIndex < subjects.length - 1) {
+                    currentSubject = subjects[currentIndex + 1];
+                    currentQIndex = 0;
+                    alert("🎉 恭喜完成" + ["历史", "道法", "地理"][currentIndex] + "关卡！进入下一科");
+                } else {
+                    // 所有科目完成
+                    alert("🏆 恭喜你通关所有关卡！最终得分：" + score + "分，你是小四门学霸！");
+                    // 重置游戏
+                    currentSubject = "history";
+                    currentQIndex = 0;
+                    score = 0;
+                    hints = 3;
+                    scoreEl.textContent = score;
+                    hintsEl.textContent = hints;
+                    hintBtn.disabled = false;
+                }
+            }
+            loadQuestion();
+        }
+
+        // 页面加载完成后初始化
+        window.onload = loadQuestion;
+    </script>
+</body>
+</html>
